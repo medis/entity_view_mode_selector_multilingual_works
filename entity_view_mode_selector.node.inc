@@ -29,12 +29,20 @@ function entity_view_mode_selector_form_node_type_form_alter(&$form, &$form_stat
 /**
  * Implements hook_form_BASE_FORM_ID_alter() for node_form.
  */
-function entity_view_mode_selector_form_node_form_alter(&$form, &$form_state, $form_id) {
+function entity_view_mode_selector_form_node_form_alter(&$form, &$form_state, $form_id) {  
   $node = $form['#node'];
   $bundle = $form['#bundle'];
   $view_modes = variable_get('entity_view_mode_selector_node_' . $bundle, array());
 
   if (!empty($view_modes)) {
+    // Get a list of installed languages.
+    $installed_languages = language_list();
+    // Format select options.
+    $language_options = array();
+    foreach ($installed_languages as $language) {
+      $language_options[$language->language] = $language->name;
+    }
+
     $enabled_view_modes = entity_view_mode_selector_get_view_modes('node', $bundle);
     $options = array();
     foreach ($view_modes as $view_mode) {
@@ -48,12 +56,31 @@ function entity_view_mode_selector_form_node_form_alter(&$form, &$form_state, $f
       '#group' => 'additional_settings',
       '#access' => user_access('select entity view modes'),
     );
-    $form['entity_view_mode_selector']['view_mode'] = array(
-      '#type' => 'radios',
-      '#description' => t('The view mode that this node will use.'),
-      '#options' => $options,
-      '#default_value' => isset($node->view_mode) ? $node->view_mode : 'full',
-    );
+
+    if (count($installed_languages) > 1) {
+      $form['entity_view_mode_selector']['language'] = array(
+        '#type' => 'select',
+        '#title' => t('Select Language'),
+        '#options' => $language_options
+      );
+      foreach ($installed_languages as $language) {
+        $form['entity_view_mode_selector']['view_mode'][$language->language] = array(
+          '#type' => 'radios',
+          '#description' => t('The view mode that this node will use in @s language.', array('@s' => $language->name)),
+          '#options' => $options,
+          '#default_value' => isset($node->view_mode) ? $node->view_mode : 'full',
+          // @TODO add reveal thing.
+        );
+      }
+    } else {
+      
+      $form['entity_view_mode_selector']['view_mode'] = array(
+        '#type' => 'radios',
+        '#description' => t('The view mode that this node will use.'),
+        '#options' => $options,
+        '#default_value' => isset($node->view_mode) ? $node->view_mode : 'full',
+      );
+    }
   }
 }
 
